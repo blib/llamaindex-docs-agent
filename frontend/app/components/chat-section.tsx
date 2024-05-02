@@ -35,9 +35,9 @@ export default function ChatSection() {
   }, [messages]);
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-row gap-2 w-[97vw] flex-wrap">
-        <div className="w-[45vw]">
+    <div className="space-y-4 flex-grow flex">
+      <div className="flex flex-row gap-2 w-[97vw] flex-wrap flex-grow">
+        <div className="w-[45vw] gap-2 flex-col flex">
           <ChatMessages
             messages={transformedMessages}
             isLoading={isLoading}

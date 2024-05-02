@@ -4,6 +4,7 @@ from llama_index.core.schema import TransformComponent
 from llama_index.core.bridge.pydantic import Field
 from llama_index.core.response_synthesizers import TreeSummarize
 from llama_index.llms.openai import OpenAI
+from yandex_chain import YandexLLM, YandexEmbeddings, YandexGPTModel
 
 class DocsSummarizer(TransformComponent):
   """Summarize current documentation page."""
@@ -34,10 +35,11 @@ class DocsSummarizer(TransformComponent):
   async def acall(self, nodes, **kwargs):
     summarizer = TreeSummarize(
       verbose=True,
-      llm=OpenAI(
-        model=self.llm,
-        temperature=0,
-      )
+      llm = YandexLLM(
+        api_key = os.getenv("YANDEX_API_KEY"),
+        folder_id =  os.getenv("YANDEX_FOLDER_ID"),
+        model = YandexGPTModel.Summarize,
+        ),
     )
 
     SUMMARY_PROMPT = "Give me a brief summary under 50 words of the given LlamaIndex documentation page. There are many pages, this is just one of them. This 50-word summary must cover everything discussed in this particular documentation page but briefly so that someone reading this brief summary will get a complete picture of what they'll learn if they read the entire page."

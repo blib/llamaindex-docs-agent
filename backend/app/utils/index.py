@@ -30,6 +30,8 @@ from app.utils.transformations import URLExtractor, Deduplicator, Upserter
 from app.utils.transformations import HyperlinksRemover, DocsSummarizer
 from app.utils.misc import get_max_h_value
 
+from yandex_chain import YandexLLM, YandexEmbeddings, YandexGPTModel
+
 from typing import Optional, Dict, Any, List, Tuple
 
 import os
@@ -222,9 +224,14 @@ def _build_document_agents(
 ) -> Dict:
     """Build document agents."""
     node_parser = CustomMarkdownNodeParser()
-    llm = OpenAI(temperature=0, model="gpt-3.5-turbo-0125")
-    embed_model = OpenAIEmbedding(
-        model="text-embedding-3-small"
+    llm = YandexLLM(
+        api_key = os.getenv("YANDEX_API_KEY"),
+        folder_id =  os.getenv("YANDEX_FOLDER_ID"),
+        model = YandexGPTModel.Pro,
+        ),
+    embed_model = YandexEmbeddings(
+        api_key = os.getenv("YANDEX_API_KEY"),
+        folder_id =  os.getenv("YANDEX_FOLDER_ID"),
     )
     Settings.llm = llm
     Settings.embed_model = embed_model
@@ -269,6 +276,20 @@ def _build_top_agent(
     callback_manager: CallbackManager
 ) -> OpenAIAgent:
     """Build top-level agent."""
+    
+    top_agent = OpenAIAgent.from_tools(
+        # tool_retriever=obj_index.as_retriever(similarity_top_k=7),
+        system_prompt=""" \
+    You are an agent designed to answer queries about a Generative AI framework, LlamaIndex.
+    Please always use the tools provided to answer a question. Do not rely on prior knowledge. Pass the provided tools with clear and elaborate queries (e.g. "install llamaindex using node js?") and then fully utilize their response to answer the original query. When using multiple tools, break the original query into multiple elaborate queries and pass them to the respective tool as input. Be sure to make the inputs long and elaborate to capture entire context of the query. Don't use 1-2 word queries.\
+
+    """,
+        verbose=True,
+        callback_manager=callback_manager,
+    )
+
+    return top_agent
+
     # define tool for each document agent
     all_tools = []
     for doc_id in doc_agents.keys():
