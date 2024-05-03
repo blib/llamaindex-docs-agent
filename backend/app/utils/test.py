@@ -8,6 +8,7 @@ from llama_index.core.schema import MetadataMode
 from llama_index.core.ingestion import IngestionPipeline
 from llama_index.core.storage.docstore import SimpleDocumentStore
 
+from app.utils import llm
 from app.utils.node_parsers.markdown import CustomMarkdownNodeParser
 from app.utils.transformations import URLExtractor, Deduplicator, Upserter
 from app.utils.transformations import HyperlinksRemover, DocsSummarizer
@@ -46,7 +47,7 @@ def main():
   hyperlinks_remover = HyperlinksRemover()
   url_extractor = URLExtractor(data_path=DATA_PATH)
   summarizer = DocsSummarizer(
-    llm="gpt-3.5-turbo-0125"
+    llm=llm
   )
   upserter = Upserter(
     docstore=docstore,

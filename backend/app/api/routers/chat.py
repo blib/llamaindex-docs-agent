@@ -62,7 +62,7 @@ async def chat(
     ]
 
     # start a new thread here to query chat engine
-    thread = Thread(target=agent.stream_chat, args=(lastMessage.content, messages))
+    thread = Thread(target=agent.chat, args=(lastMessage.content, messages))
     thread.start()
     logger.info("Querying chat engine")
     # response = agent.stream_chat(lastMessage.content, messages)

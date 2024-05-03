@@ -1,3 +1,4 @@
+.env
 __pycache__
 storage
 pipeline_storage

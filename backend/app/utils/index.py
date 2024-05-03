@@ -1,11 +1,14 @@
 import logging
 import os
+
+from llama_index.core.chat_engine import SimpleChatEngine
+from llama_index.llms.langchain import LangChainLLM
 from pydantic import BaseModel
 import shutil
 from queue import Queue
 
 from llama_index.agent.openai import OpenAIAgent
-from llama_index.core import VectorStoreIndex
+from llama_index.core import VectorStoreIndex, ServiceContext
 from llama_index.core.objects import ObjectIndex, SimpleToolNodeMapping
 from llama_index.core.tools import QueryEngineTool, ToolMetadata
 from llama_index.llms.openai import OpenAI
@@ -25,6 +28,7 @@ from llama_index.core.storage.docstore.types import BaseDocumentStore
 from llama_index.core.callbacks.schema import EventPayload
 from llama_index.core.schema import NodeWithScore
 
+from app.utils.llm import llm
 from app.utils.node_parsers.markdown import CustomMarkdownNodeParser
 from app.utils.transformations import URLExtractor, Deduplicator, Upserter
 from app.utils.transformations import HyperlinksRemover, DocsSummarizer
@@ -105,6 +109,8 @@ class StreamingCallbackHandler(BaseCallbackHandler):
         if event_type == CBEventType.AGENT_STEP:
             # put LLM response into queue
             self._queue.put(payload["response"])
+        elif event_type == CBEventType.LLM:
+            self._queue.put(f"{payload}")
         elif event_type == CBEventType.RETRIEVE:
             nodes_with_scores: list[NodeWithScore] = payload[EventPayload.NODES]
             nodes_to_return = []
@@ -130,6 +136,8 @@ class StreamingCallbackHandler(BaseCallbackHandler):
                     }
                 )
             )
+        else:
+            self._queue.put(f"event: {event_type} payload: {payload}")
 
     @property
     def queue(self) -> Queue:
@@ -342,6 +350,19 @@ def _build_top_agent(
 async def get_agent():
     logger = logging.getLogger("uvicorn")
 
+    # define callback manager with streaming
+    queue = Queue()
+    handler = StreamingCallbackHandler(queue)
+    callback_manager = CallbackManager([handler])
+
+    Settings.callback_manager = callback_manager
+    Settings.llm = LangChainLLM(
+                llm=YandexLLM(api_key=os.environ.get("YANDEX_API_KEY"), folder_id=os.environ.get("YANDEX_FOLDER_ID"), model=YandexGPTModel.Pro),
+                )
+    xxx = SimpleChatEngine.from_defaults()
+
+    return xxx
+
     if os.path.exists(PIPELINE_STORAGE_DIR):
         docstore = SimpleDocumentStore.from_persist_dir(PIPELINE_STORAGE_DIR)
     else:
@@ -353,11 +374,6 @@ async def get_agent():
         directory=f'{DATA_DIR}/docs/modules',
         docstore=docstore,
     )
-
-    # define callback manager with streaming
-    queue = Queue()
-    handler = StreamingCallbackHandler(queue)
-    callback_manager = CallbackManager([handler])
 
     # build agent for each document
     doc_agents = _build_document_agents(
